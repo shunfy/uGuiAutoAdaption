@@ -10,8 +10,8 @@ public class uGuiAutoAdaption : MonoBehaviour
     {
         [SerializeField, Header("刘海设备型号")]
         public string deviceModel;
-        [SerializeField, Header("该型号的刘海占比")]
-        public float adaptionRatio = 0.033f;
+        [SerializeField, Header("该型号的刘海尺寸")]
+        public float adaptionSize = 20f;
     }
     [SerializeField, Header("UI摄像机")]
     private Camera uiCamera;
@@ -21,10 +21,10 @@ public class uGuiAutoAdaption : MonoBehaviour
     [SerializeField, Header("标准分辨率: 高")]
     private int standardHeight = 1080;
 
-    [SerializeField, Header("最大自适应分辨率: 宽"), Tooltip("自适应拓展的范围 一定保证大于刘海的大小")]
-    private int maxWidth = 1920 + 10;
-    [SerializeField, Header("最大自适应分辨率: 高"), Tooltip("自适应拓展的范围 一定保证大于刘海的大小")]
-    private int maxHeight = 1080 + 10;
+    [SerializeField, Header("最大自适应分辨率: 宽")]
+    private int maxWidth = 1920 + 100;
+    [SerializeField, Header("最大自适应分辨率: 高")]
+    private int maxHeight = 1080 + 100;
 
     [SerializeField, Header("刘海屏适应列表")]
     private Adaption[] adaptions;
@@ -46,9 +46,20 @@ public class uGuiAutoAdaption : MonoBehaviour
     private int screenHeight;
 
     private static Vector2 TMP_VECTOR2;
+    private static Vector3 TMP_VECTOR3;
 
     private RectTransform cachedTran;
     public RectTransform CachedTran { get { if (cachedTran == null) cachedTran = GetComponent<RectTransform>(); return cachedTran; } }
+
+    public static uGuiAutoAdaption Inst { get; private set; }
+
+    public float Width { get; private set; }
+    public float Height { get; private set; }
+
+    private void Awake()
+    {
+        Inst = this;
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -64,25 +75,31 @@ public class uGuiAutoAdaption : MonoBehaviour
             screenWidth = Screen.width;
             screenHeight = Screen.height;
 
-            float width = screenWidth;
-            float height = screenHeight;
-            float standardCameraSize = standardHeight / 2.0f;
-            float standardAspect = standardWidth / (float)standardHeight;
-            float screenAspect = width / height;
-            float cameraScaleRatio = standardAspect / screenAspect;
-            if (screenAspect < standardAspect)
-            {
-                uiCamera.orthographicSize = standardCameraSize * cameraScaleRatio;
-                width = standardWidth;
-                height = Math.Min(maxHeight, standardHeight * cameraScaleRatio);
-            }
-            else
-            {
-                uiCamera.orthographicSize = standardCameraSize;
-                height = standardHeight;
-                width = Math.Min(maxWidth, standardWidth / cameraScaleRatio);
-            }
+            float viewWidth = screenWidth;
+            float viewHeight = screenHeight;
 
+            #region 计算摄像机视野
+            {
+                float standardCameraSize = standardHeight / 2.0f;
+                float standardAspect = standardWidth / (float)standardHeight;
+                float screenAspect = viewWidth / viewHeight;
+                float cameraScaleRatio = standardAspect / screenAspect;
+                if (screenAspect < standardAspect)
+                {
+                    uiCamera.orthographicSize = standardCameraSize * cameraScaleRatio;
+                    viewWidth = standardWidth;
+                    viewHeight = standardHeight * cameraScaleRatio;
+                }
+                else
+                {
+                    uiCamera.orthographicSize = standardCameraSize;
+                    viewHeight = standardHeight;
+                    viewWidth = standardWidth / cameraScaleRatio;
+                }
+            }
+            #endregion
+            float adaptionX = 0;
+            float adaptionY = 0;
             #region 计算自适应和刘海占用比
             {
                 if (adaptions != null && adaptions.Length > 0)
@@ -92,24 +109,10 @@ public class uGuiAutoAdaption : MonoBehaviour
                     {
                         if (deviceModel == adaptions[i].deviceModel)
                         {
-                            if (screenAspect > 1)
-                            {
-                                float adaptionPer = adaptions[i].adaptionRatio;
-
-                                TMP_VECTOR2.x = width * adaptionPer * 0.5f;
-                                TMP_VECTOR2.y = 0;
-
-                                width -= width * adaptionPer;                                
-                            }
+                            if (screenWidth > screenHeight)
+                                adaptionX = viewWidth * (adaptions[i].adaptionSize / screenWidth);                              
                             else
-                            {
-                                float adaptionPer = adaptions[i].adaptionRatio;
-                                TMP_VECTOR2.x = 0;
-                                TMP_VECTOR2.y = -height * adaptionPer * 0.5f;
-
-                                height -= height * adaptionPer;
-                            }
-                            CachedTran.anchoredPosition = TMP_VECTOR2;
+                                adaptionY = viewHeight * (adaptions[i].adaptionSize / screenHeight);
                             break;
                         }
                     }
@@ -117,8 +120,82 @@ public class uGuiAutoAdaption : MonoBehaviour
             }
             #endregion
 
-            TMP_VECTOR2.x = width;
-            TMP_VECTOR2.y = height;
+            Width = viewWidth;
+            Height = viewHeight;
+            #region 计算实际使用大小
+            {
+                if (adaptionX > 0)
+                {
+                    Height = Math.Min(viewHeight, maxHeight);
+                    if (viewWidth >= maxWidth + adaptionX * 2)
+                    {
+                        Width = maxWidth;
+                    }
+                    else if (viewWidth >= standardWidth + adaptionX * 2)
+                    {
+                        Width = viewWidth - adaptionX * 2;
+                    }
+                    else if (viewWidth >= standardWidth + adaptionX)
+                    {
+                        Width = viewWidth - adaptionX;
+                        TMP_VECTOR2.x = adaptionX - (viewWidth - standardWidth) * 0.5f;
+                        TMP_VECTOR2.y = 0;
+                        CachedTran.anchoredPosition = TMP_VECTOR2;
+                    }
+                    else
+                    {
+                        TMP_VECTOR2.x = adaptionX - (viewWidth - standardWidth) * 0.5f;
+                        TMP_VECTOR2.y = 0;
+                        CachedTran.anchoredPosition = TMP_VECTOR2;
+
+                        Width = standardWidth;
+                        float tmp = standardWidth / (viewWidth - adaptionX);
+                        Height = Math.Min(maxHeight, viewHeight * tmp);
+                        TMP_VECTOR3 = Vector3.one * (1 / tmp);
+                        CachedTran.localScale = TMP_VECTOR3;
+                    }
+                }
+                else if (adaptionY > 0)
+                {
+                    Width = Math.Min(viewWidth, maxWidth);
+                    if (viewHeight >= maxHeight + adaptionY * 2)
+                    {
+                        Height = maxHeight;
+                    }
+                    else if (viewHeight >= standardHeight + adaptionY * 2)
+                    {
+                        Height = viewHeight - adaptionY * 2;
+                    }
+                    else if (viewHeight >= standardHeight + adaptionY)
+                    {
+                        Height = viewHeight - adaptionY;
+                        TMP_VECTOR2.y = (viewHeight - standardHeight) * 0.5f - adaptionY;
+                        TMP_VECTOR2.x = 0;
+                        CachedTran.anchoredPosition = TMP_VECTOR2;
+                    }
+                    else
+                    {
+                        TMP_VECTOR2.y = (viewHeight - standardHeight) * 0.5f - adaptionY;
+                        TMP_VECTOR2.x = 0;
+                        CachedTran.anchoredPosition = TMP_VECTOR2;
+
+                        Height = standardHeight;
+                        float tmp = standardHeight / (viewHeight - adaptionY);
+                        Width = Math.Min(maxWidth, viewWidth * tmp);
+                        TMP_VECTOR3 = Vector3.one * (1 / tmp);
+                        CachedTran.localScale = TMP_VECTOR3;
+                    }
+                }
+                else
+                {
+                    Width = Math.Min(viewWidth, maxWidth);
+                    Height = Math.Min(viewHeight, maxHeight);
+                }                
+            }
+            #endregion
+
+            TMP_VECTOR2.x = Width;
+            TMP_VECTOR2.y = Height;
             CachedTran.sizeDelta = TMP_VECTOR2;
         }        
     }
