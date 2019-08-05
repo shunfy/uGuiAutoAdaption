@@ -46,6 +46,8 @@ public class uGuiAutoAdaption : MonoBehaviour
     private int screenHeight;
     private int cutSize = 0;
 
+    private static Vector2 TMP_VECTOR2;
+
     private RectTransform cachedTran;
     public RectTransform CachedTran { get { if (cachedTran == null) cachedTran = GetComponent<RectTransform>(); return cachedTran; } }
 
@@ -65,6 +67,7 @@ public class uGuiAutoAdaption : MonoBehaviour
         {
             screenWidth = Screen.width;
             screenHeight = Screen.height;
+            cutSize = 0;
             string deviceModel = getSysDeviceModel();
             if (adaptions != null)
             {
@@ -81,10 +84,18 @@ public class uGuiAutoAdaption : MonoBehaviour
             float height = screenHeight;
             if (cutSize != 0)
             {
+                TMP_VECTOR2 = CachedTran.anchoredPosition;                
                 if (screenWidth > screenHeight)
+                {
                     width -= cutSize;
+                    TMP_VECTOR2.x = cutSize;
+                }                    
                 else
+                {
                     screenHeight -= cutSize;
+                    TMP_VECTOR2.y = -cutSize;
+                }
+                CachedTran.anchoredPosition = TMP_VECTOR2;
             }
             float standardCameraSize = standardHeight / 2.0f;
             float newAspect = width / height;
@@ -92,15 +103,19 @@ public class uGuiAutoAdaption : MonoBehaviour
             float preSize = standardAspect / newAspect;
             if (newAspect < standardAspect)
             {
-                uiCamera.orthographicSize = standardAspect * preSize;
+                uiCamera.orthographicSize = standardCameraSize * preSize;
                 width = standardWidth;
-                height = standardHeight * preSize;
-
+                height = Math.Min(maxHeight, standardHeight * preSize);
             }
             else
             {
-                uiCamera.orthographicSize = standardAspect;
+                uiCamera.orthographicSize = standardCameraSize;
+                height = standardHeight;
+                width = Math.Min(maxWidth, standardWidth / preSize);
             }
+            TMP_VECTOR2.x = width;
+            TMP_VECTOR2.y = height;
+            CachedTran.sizeDelta = TMP_VECTOR2;
         }        
     }
 }
