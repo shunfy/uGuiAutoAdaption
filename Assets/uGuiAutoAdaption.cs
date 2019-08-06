@@ -5,6 +5,15 @@ using UnityEngine;
 public class uGuiAutoAdaption : MonoBehaviour
 {
     [Serializable]
+    public enum AdaptionType
+    {
+        [Header("范围内自适应")]
+        Auto,
+        [Header("范围内强拉伸")]
+        Stretch,
+    }
+
+    [Serializable]
     private class Adaption
     {
         [SerializeField, Header("设备型号")]
@@ -20,6 +29,9 @@ public class uGuiAutoAdaption : MonoBehaviour
     }
     [SerializeField, Header("UI摄像机")]
     private Camera uiCamera;
+
+    [SerializeField, Header("分辨率适配方式")]
+    private AdaptionType adaptionType = AdaptionType.Auto;
 
     [SerializeField, Header("标准分辨率: 宽")]
     private int standardWidth = 1920;
@@ -48,6 +60,7 @@ public class uGuiAutoAdaption : MonoBehaviour
     }
 
     private static Vector2 TMP_VECTOR2;
+    private static Vector3 TMP_VECTOR3;
 
     private RectTransform cachedTran;
     public RectTransform CachedTran { get { if (cachedTran == null) cachedTran = GetComponent<RectTransform>(); return cachedTran; } }
@@ -125,6 +138,17 @@ public class uGuiAutoAdaption : MonoBehaviour
         Width = Math.Min(Width, maxWidth);
         Height = Math.Min(Height, maxHeight);
 
+        if (adaptionType == AdaptionType.Stretch)
+        {
+            TMP_VECTOR3.x = Width / standardWidth;
+            TMP_VECTOR3.y = Height / standardHeight;
+            TMP_VECTOR3.z = 1;
+            CachedTran.localScale = TMP_VECTOR3;
+
+            Width = standardWidth;
+            Height = standardHeight;
+        }
+
         TMP_VECTOR2.x = Width;
         TMP_VECTOR2.y = Height;
         CachedTran.sizeDelta = TMP_VECTOR2;
@@ -136,10 +160,12 @@ public class uGuiAutoAdaption : MonoBehaviour
         execAdaption();
     }
 
+    private AdaptionType last_adaptionType = AdaptionType.Auto;
     void Update()
     {
-        if (ScreenWidth != Screen.width || ScreenHeight != Screen.height)
+        if (ScreenWidth != Screen.width || ScreenHeight != Screen.height || last_adaptionType != adaptionType)
         {
+            last_adaptionType = adaptionType;
             execAdaption();
         }
     }
