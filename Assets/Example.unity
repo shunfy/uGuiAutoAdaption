@@ -757,7 +757,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 30, y: 0}
   m_SizeDelta: {x: 2020, y: 1080}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1918420840
@@ -773,6 +773,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   uiCamera: {fileID: 29003745}
+  adaptionType: 0
   standardWidth: 1920
   standardHeight: 1080
   maxWidth: 2020
@@ -781,9 +782,9 @@ MonoBehaviour:
   - deviceModel: vivo X27
     targetX: 2300
     targetY: 1080
-    offsetX: 30
+    offsetX: 0
     offsetY: 0
-  testSysDeviceModel: test
+  testSysDeviceModel: vivo X27
 --- !u!1 &2015679291
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,7 +14,7 @@ public class uGuiAutoAdaption : MonoBehaviour
     }
 
     [Serializable]
-    private class Adaption
+    public class Adaption
     {
         [SerializeField, Header("设备型号")]
         public string deviceModel;
@@ -79,10 +79,13 @@ public class uGuiAutoAdaption : MonoBehaviour
     private void Awake()
     {
         Inst = this;
-        execAdaption();
     }
 
-    void execAdaption()
+    /// <summary>
+    /// 外部调用的自适应接口
+    /// </summary>
+    /// <param name="adaption">适配参数</param>
+    public void ExecAdaption(Adaption adaption = null)
     {
         ScreenWidth = Screen.width;
         ScreenHeight = Screen.height;
@@ -115,23 +118,14 @@ public class uGuiAutoAdaption : MonoBehaviour
         Height = ViewHeight;
 
         #region 特殊适配自适应
+        if (adaption != null)
         {
-            if (adaptions != null && adaptions.Length > 0)
-            {
-                string deviceModel = getSysDeviceModel();
-                for (int i = 0; i < adaptions.Length; ++i)
-                {
-                    if (deviceModel == adaptions[i].deviceModel)
-                    {
-                        Width = ViewWidth * (adaptions[i].targetX / ScreenWidth);
-                        Height = ViewHeight * (adaptions[i].targetY / ScreenHeight);
+            Width = ViewWidth * (adaption.targetX / ScreenWidth);
+            Height = ViewHeight * (adaption.targetY / ScreenHeight);
 
-                        TMP_VECTOR2.x = adaptions[i].offsetX;
-                        TMP_VECTOR2.y = adaptions[i].offsetY;
-                        CachedTran.anchoredPosition = TMP_VECTOR2;
-                    }
-                }
-            }
+            TMP_VECTOR2.x = adaption.offsetX;
+            TMP_VECTOR2.y = adaption.offsetY;
+            CachedTran.anchoredPosition = TMP_VECTOR2;
         }
         #endregion
 
@@ -152,6 +146,24 @@ public class uGuiAutoAdaption : MonoBehaviour
         TMP_VECTOR2.x = Width;
         TMP_VECTOR2.y = Height;
         CachedTran.sizeDelta = TMP_VECTOR2;
+    }
+
+    void execAdaption()
+    {
+        if (adaptions != null && adaptions.Length > 0)
+        {
+            string deviceModel = getSysDeviceModel();
+            for (int i = 0; i < adaptions.Length; ++i)
+            {
+                if (deviceModel == adaptions[i].deviceModel)
+                {
+                    ExecAdaption(adaptions[i]);
+                    return;
+                }
+            }
+        }
+
+        ExecAdaption();
     }
 
 #if UNITY_EDITOR
