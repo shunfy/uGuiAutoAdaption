@@ -8,9 +8,9 @@ public class uGuiAutoAdaption : MonoBehaviour
     public enum AdaptionType
     {
         [Header("范围内自适应")]
-        Auto,
+        Auto = 1,
         [Header("范围内强拉伸")]
-        Stretch,
+        Stretch = 2,
     }
 
     [Serializable]
@@ -46,6 +46,25 @@ public class uGuiAutoAdaption : MonoBehaviour
     [SerializeField, Header("特殊适配列表")]
     private Adaption[] adaptions;
 
+    public void SetAdaption(AdaptionType _adaptionType, int _standardWidth, int _standardHeight, int _maxWidth, int _maxHeight)
+    {
+        adaptionType = _adaptionType;
+        standardWidth = _standardWidth;
+        standardHeight = _standardHeight;
+        maxWidth = _maxWidth;
+        maxHeight = _maxHeight;
+    }
+
+    public void ExecAdaption(int targetX, int targetY, int offsetX, int offsetY)
+    {
+        Adaption adaption = new Adaption();
+        adaption.targetX = targetX;
+        adaption.targetY = targetY;
+        adaption.offsetX = offsetX;
+        adaption.offsetY = offsetY;
+        ExecAdaption(adaption);
+    }
+
 #if UNITY_EDITOR
     public string testSysDeviceModel = "test";
 #endif
@@ -65,21 +84,24 @@ public class uGuiAutoAdaption : MonoBehaviour
     private RectTransform cachedTran;
     public RectTransform CachedTran { get { if (cachedTran == null) cachedTran = GetComponent<RectTransform>(); return cachedTran; } }
 
-    public static uGuiAutoAdaption Inst { get; private set; }
-
     public float ScreenWidth { get; private set; }
     public float ScreenHeight { get; private set; }
 
     public float Width { get; private set; }
     public float Height { get; private set; }
-
+    public Vector2 Size
+    {
+        get
+        {
+            TMP_VECTOR2.x = Width;
+            TMP_VECTOR2.y = Height;
+            return TMP_VECTOR2;
+        }
+    }
+    public int StandardWidth { get { return standardWidth; } }
+    public int StandardHeight { get { return standardHeight; } }
     public float ViewWidth { get; private set; }
     public float ViewHeight { get; private set; }
-
-    private void Awake()
-    {
-        Inst = this;
-    }
 
     /// <summary>
     /// 外部调用的自适应接口
@@ -114,8 +136,8 @@ public class uGuiAutoAdaption : MonoBehaviour
         }
         #endregion
 
-        Width = ViewWidth;
-        Height = ViewHeight;
+        Width = Math.Min(ViewWidth, maxWidth);
+        Height = Math.Min(ViewHeight, maxHeight);
 
         #region 特殊适配自适应
         if (adaption != null)
@@ -128,9 +150,6 @@ public class uGuiAutoAdaption : MonoBehaviour
             CachedTran.anchoredPosition = TMP_VECTOR2;
         }
         #endregion
-
-        Width = Math.Min(Width, maxWidth);
-        Height = Math.Min(Height, maxHeight);
 
         if (adaptionType == AdaptionType.Stretch)
         {
